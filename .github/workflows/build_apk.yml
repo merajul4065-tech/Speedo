@@ -30,8 +30,11 @@ jobs:
 
       - name: Generate Android Skeleton
         run: |
-          # Lowercase name specify kiya taaki error na aaye
-          flutter create --platforms=android --project-name=speedo .
+          # Backup main.dart agar create use replace kare
+          cp lib/main.dart lib/main_backup.dart || true
+          flutter create --platforms=android --project-name=speedo --overwrite .
+          # Restore main.dart with Customer + Driver code
+          cp lib/main_backup.dart lib/main.dart
 
       - name: Install Dependencies
         run: flutter pub get
@@ -41,15 +44,15 @@ jobs:
 
       - name: Rename APK
         run: |
-          cp build/app/outputs/flutter-apk/app-release.apk SpeedoApp.apk
+          cp build/app/outputs/flutter-apk/app-release.apk speedoApp.apk
 
       - name: Create GitHub Release & Upload APK
         uses: softprops/action-gh-release@v2
         with:
           tag_name: "v1.0.${{ github.run_number }}"
-          name: "Speedo App Build #${{ github.run_number }}"
-          body: "Direct download link for Speedo delivery app."
-          files: SpeedoApp.apk
+          name: "speedo App Build #${{ github.run_number }}"
+          body: "Direct download link for speedo delivery app."
+          files: speedoApp.apk
           draft: false
           prerelease: false
         env:
