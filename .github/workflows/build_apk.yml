@@ -28,6 +28,11 @@ jobs:
           channel: 'stable'
           cache: true
 
+      - name: Generate Android Skeleton
+        run: |
+          # Agar android folder nahi hai toh Flutter khud create karega
+          flutter create --platforms=android .
+
       - name: Install Dependencies
         run: flutter pub get
 
@@ -43,7 +48,7 @@ jobs:
         with:
           tag_name: "v1.0.${{ github.run_number }}"
           name: "Speedo App Build #${{ github.run_number }}"
-          body: "Speedo Delivery App direct APK download."
+          body: "Direct download link for Speedo delivery app."
           files: SpeedoApp.apk
           draft: false
           prerelease: false
