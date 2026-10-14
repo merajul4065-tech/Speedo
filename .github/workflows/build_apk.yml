@@ -30,8 +30,8 @@ jobs:
 
       - name: Generate Android Skeleton
         run: |
-          # Agar android folder nahi hai toh Flutter khud create karega
-          flutter create --platforms=android .
+          # Lowercase name specify kiya taaki error na aaye
+          flutter create --platforms=android --project-name=speedo .
 
       - name: Install Dependencies
         run: flutter pub get
