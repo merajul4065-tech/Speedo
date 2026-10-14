@@ -1,59 +1,20 @@
-name: Build & Auto Release APK
+name: speedo
+description: "Porter style hyperlocal logistics app"
+publish_to: "none"
+version: 1.0.0+1
 
-on:
-  push:
-    branches: [ "main" ]
-  workflow_dispatch:
+environment:
+  sdk: ^3.5.0
 
-permissions:
-  contents: write
+dependencies:
+  flutter:
+    sdk: flutter
+  http: ^1.2.2
 
-jobs:
-  build-and-release:
-    runs-on: ubuntu-latest
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
 
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
-
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          channel: 'stable'
-          cache: true
-
-      - name: Generate Android Skeleton
-        run: |
-          # Backup main.dart agar create use replace kare
-          cp lib/main.dart lib/main_backup.dart || true
-          flutter create --platforms=android --project-name=speedo --overwrite .
-          # Restore main.dart with Customer + Driver code
-          cp lib/main_backup.dart lib/main.dart
-
-      - name: Install Dependencies
-        run: flutter pub get
-
-      - name: Build Release APK
-        run: flutter build apk --release
-
-      - name: Rename APK
-        run: |
-          cp build/app/outputs/flutter-apk/app-release.apk speedoApp.apk
-
-      - name: Create GitHub Release & Upload APK
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: "v1.0.${{ github.run_number }}"
-          name: "speedo App Build #${{ github.run_number }}"
-          body: "Direct download link for speedo delivery app."
-          files: speedoApp.apk
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+flutter:
+  uses-material-design: true
