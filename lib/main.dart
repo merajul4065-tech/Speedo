@@ -11,14 +11,14 @@ class PorterSpeedoApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Porter',
+      title: 'Porter Speedo',
       theme: ThemeData(
         useMaterial3: true,
         fontFamily: 'Roboto',
-        scaffoldBackgroundColor: const Color(0xFFF4F6F9),
+        scaffoldBackgroundColor: const Color(0xFFF3F4F6),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1E3A8A),
-          primary: const Color(0xFF1E3A8A),
+          seedColor: const Color(0xFF1D4ED8),
+          primary: const Color(0xFF1D4ED8),
         ),
       ),
       home: const MainPorterShell(),
@@ -65,7 +65,7 @@ class _MainPorterShellState extends State<MainPorterShell> {
             ),
             const SizedBox(width: 10),
             Text(
-              isDriverMode ? 'Partner' : 'City Logistics',
+              isDriverMode ? 'Partner App' : 'City Logistics',
               style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
             ),
           ],
@@ -117,7 +117,7 @@ class _MainPorterShellState extends State<MainPorterShell> {
 }
 
 // ==========================================
-// 1. PORTER AUTH VIEW (OTP LOGIN)
+// 1. CUSTOMER LOGIN
 // ==========================================
 class PorterCustomerAuthView extends StatefulWidget {
   final Function(String) onSuccess;
@@ -144,8 +144,8 @@ class _PorterCustomerAuthViewState extends State<PorterCustomerAuthView> {
             child: Container(
               width: 80,
               height: 80,
-              decoration: BoxDecoration(
-                color: const Color(0xFFE0E7FF),
+              decoration: const BoxDecoration(
+                color: Color(0xFFE0E7FF),
                 shape: BoxShape.circle,
               ),
               child: const Icon(Icons.local_shipping, size: 42, color: Color(0xFF1D4ED8)),
@@ -158,7 +158,7 @@ class _PorterCustomerAuthViewState extends State<PorterCustomerAuthView> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'Hassle-free mini trucks and courier service on demand',
+            'Enter mobile number to select custom locations and book instant trucks',
             style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 24),
@@ -210,11 +210,11 @@ class _PorterCustomerAuthViewState extends State<PorterCustomerAuthView> {
                   if (phoneCtrl.text.trim().length == 10) {
                     setState(() => otpTriggered = true);
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('OTP sent successfully. Demo code: 1234')),
+                      const SnackBar(content: Text('OTP sent! Use demo code: 1234')),
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Please enter a valid 10-digit mobile number')),
+                      const SnackBar(content: Text('Please enter a valid 10-digit number')),
                     );
                   }
                 } else {
@@ -240,7 +240,7 @@ class _PorterCustomerAuthViewState extends State<PorterCustomerAuthView> {
 }
 
 // ==========================================
-// 2. PORTER BOOKING VIEW (CARDS & FARES)
+// 2. CUSTOM LOCATION BOOKING (A TO Z)
 // ==========================================
 class PorterCustomerHomeView extends StatefulWidget {
   const PorterCustomerHomeView({super.key});
@@ -250,122 +250,258 @@ class PorterCustomerHomeView extends StatefulWidget {
 }
 
 class _PorterCustomerHomeViewState extends State<PorterCustomerHomeView> {
-  int selectedVehicle = 2;
+  final TextEditingController pickupCtrl = TextEditingController(text: 'Connaught Place, Central Delhi');
+  final TextEditingController dropCtrl = TextEditingController(text: 'Sector 62, Electronic City, Noida');
 
-  final List<Map<String, dynamic>> porterFleets = [
+  int selectedVehicle = 2;
+  double distanceKm = 18.5;
+
+  final List<Map<String, dynamic>> baseFleets = [
     {
       'title': '2-Wheeler',
       'cap': '20 kg',
-      'dim': 'Courier & Box',
-      'fare': '₹49',
+      'dim': 'Courier, Envelopes & Small Boxes',
+      'baseFare': 35,
+      'perKm': 9.0,
       'icon': Icons.two_wheeler,
       'eta': '3 mins',
     },
     {
       'title': '3-Wheeler',
       'cap': '500 kg',
-      'dim': '5.5ft x 3.5ft',
-      'fare': '₹195',
+      'dim': '5.5ft x 3.5ft (Commercial Loads)',
+      'baseFare': 120,
+      'perKm': 14.0,
       'icon': Icons.electric_rickshaw,
-      'eta': '7 mins',
+      'eta': '6 mins',
     },
     {
       'title': 'Tata Ace',
       'cap': '750 kg',
-      'dim': '7ft x 4ft x 5ft',
-      'fare': '₹289',
+      'dim': '7ft x 4ft x 5ft (Chhota Hathi)',
+      'baseFare': 180,
+      'perKm': 18.0,
       'icon': Icons.local_shipping,
       'eta': '4 mins',
     },
     {
       'title': 'Pickup 8ft',
       'cap': '1200 kg',
-      'dim': '8ft x 4.5ft x 5.5ft',
-      'fare': '₹480',
+      'dim': '8ft x 4.5ft (House Shifting / Bulk)',
+      'baseFare': 300,
+      'perKm': 24.0,
       'icon': Icons.fire_truck_sharp,
-      'eta': '11 mins',
+      'eta': '10 mins',
     },
   ];
 
+  int calculateFare(Map<String, dynamic> fleet) {
+    double fare = (fleet['baseFare'] as int) + (distanceKm * (fleet['perKm'] as double));
+    return fare.round();
+  }
+
+  void _openLocationEditDialog(bool isPickup) {
+    final textCtrl = TextEditingController(text: isPickup ? pickupCtrl.text : dropCtrl.text);
+
+    final List<String> popularPlaces = [
+      'Connaught Place, New Delhi',
+      'Chandni Chowk Market, Old Delhi',
+      'Sector 62, Electronic City, Noida',
+      'Cyber City, DLF Phase 2, Gurugram',
+      'Lajpat Nagar Central Market, South Delhi',
+      'Indirapuram, Ghaziabad',
+      'Rohini Sector 10, North West Delhi',
+      'Faridabad Industrial Area, Sector 24',
+    ];
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) {
+        return Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom, left: 16, right: 16, top: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                isPickup ? 'Set Pickup Location (Point A)' : 'Set Drop Location (Point Z)',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: textCtrl,
+                autofocus: true,
+                decoration: InputDecoration(
+                  prefixIcon: Icon(
+                    isPickup ? Icons.radio_button_checked : Icons.location_on,
+                    color: isPickup ? Colors.green : Colors.redAccent,
+                  ),
+                  hintText: 'Type custom address or area',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text('Quick Suggestions:', style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              SizedBox(
+                height: 160,
+                child: ListView.builder(
+                  itemCount: popularPlaces.length,
+                  itemBuilder: (context, idx) {
+                    return ListTile(
+                      dense: true,
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.history, size: 18, color: Colors.grey),
+                      title: Text(popularPlaces[idx], style: const TextStyle(fontSize: 13)),
+                      onTap: () {
+                        setState(() {
+                          if (isPickup) {
+                            pickupCtrl.text = popularPlaces[idx];
+                          } else {
+                            dropCtrl.text = popularPlaces[idx];
+                          }
+                          distanceKm = 12.0 + (idx * 2.5);
+                        });
+                        Navigator.pop(context);
+                      },
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(height: 10),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D4ED8)),
+                  onPressed: () {
+                    setState(() {
+                      if (isPickup) {
+                        pickupCtrl.text = textCtrl.text.trim();
+                      } else {
+                        dropCtrl.text = textCtrl.text.trim();
+                      }
+                      distanceKm = (15.0 + (textCtrl.text.length % 10)).toDouble();
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Confirm Location', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final activeVehicle = porterFleets[selectedVehicle];
+    final activeVehicle = baseFleets[selectedVehicle];
+    final activeFare = calculateFare(activeVehicle);
 
     return Column(
       children: [
-        // Pickup & Drop Selector Card
+        // Dynamic Location Selector Card (A to Z)
         Container(
-          padding: const EdgeInsets.all(16),
-          color: Colors.white,
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 2))],
+          ),
           child: Column(
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.circle, size: 10, color: Colors.green),
-                  const SizedBox(width: 12),
-                  const Expanded(
-                    child: Text(
-                      'Connaught Place, New Delhi',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              InkWell(
+                onTap: () => _openLocationEditDialog(true),
+                child: Row(
+                  children: [
+                    const Icon(Icons.radio_button_checked, size: 16, color: Colors.green),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('PICKUP POINT (A)', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Text(
+                            pickupCtrl.text,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 4.0),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Container(width: 2, height: 16, color: Colors.grey.shade300),
+                    const Icon(Icons.edit, size: 16, color: Color(0xFF1D4ED8)),
+                  ],
                 ),
               ),
-              Row(
-                children: [
-                  const Icon(Icons.location_on, size: 14, color: Colors.redAccent),
-                  const SizedBox(width: 10),
-                  const Expanded(
-                    child: Text(
-                      'Sector 62, Electronic City, Noida',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4.0),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 7),
+                    Container(width: 2, height: 18, color: Colors.grey.shade300),
+                    const SizedBox(width: 20),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(6)),
+                      child: Text('Route: ${distanceKm.toStringAsFixed(1)} km', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF1D4ED8))),
+                    )
+                  ],
+                ),
+              ),
+              InkWell(
+                onTap: () => _openLocationEditDialog(false),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on, size: 18, color: Colors.redAccent),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('DROP POINT (Z)', style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                          Text(
+                            dropCtrl.text,
+                            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(4)),
-                    child: const Text('18.2 km', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.grey)),
-                  )
-                ],
+                    const Icon(Icons.edit, size: 16, color: Color(0xFF1D4ED8)),
+                  ],
+                ),
               ),
             ],
           ),
         ),
 
-        const SizedBox(height: 10),
-
-        // Fleet Category Heading
         const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+          padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 2.0),
           child: Align(
             alignment: Alignment.centerLeft,
-            child: Text(
-              'Select Vehicle',
-              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF374151)),
-            ),
+            child: Text('Available Porter Fleet', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: Color(0xFF374151))),
           ),
         ),
 
-        // Vehicle list (Porter style)
+        // Fleet List with Dynamic Pricing
         Expanded(
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: porterFleets.length,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            itemCount: baseFleets.length,
             itemBuilder: (context, index) {
-              final v = porterFleets[index];
+              final v = baseFleets[index];
+              final fare = calculateFare(v);
               final isPicked = selectedVehicle == index;
 
               return GestureDetector(
                 onTap: () => setState(() => selectedVehicle = index),
                 child: Container(
-                  margin: const EdgeInsets.symmetric(vertical: 5),
+                  margin: const EdgeInsets.symmetric(vertical: 4),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
                     color: Colors.white,
@@ -374,9 +510,6 @@ class _PorterCustomerHomeViewState extends State<PorterCustomerHomeView> {
                       width: 2,
                     ),
                     borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 4, offset: const Offset(0, 2)),
-                    ],
                   ),
                   child: Row(
                     children: [
@@ -388,7 +521,7 @@ class _PorterCustomerHomeViewState extends State<PorterCustomerHomeView> {
                         ),
                         child: Icon(v['icon'] as IconData, size: 30, color: const Color(0xFF1D4ED8)),
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -408,11 +541,11 @@ class _PorterCustomerHomeViewState extends State<PorterCustomerHomeView> {
                               ],
                             ),
                             const SizedBox(height: 2),
-                            Text('Capacity: ${v['cap']} • ${v['dim']}', style: const TextStyle(fontSize: 11, color: Colors.grey)),
+                            Text('Load: ${v['cap']} • ${v['dim']}', style: const TextStyle(fontSize: 11, color: Colors.grey), overflow: TextOverflow.ellipsis),
                           ],
                         ),
                       ),
-                      Text(v['fare'], style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                      Text('₹$fare', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
                     ],
                   ),
                 ),
@@ -429,56 +562,40 @@ class _PorterCustomerHomeViewState extends State<PorterCustomerHomeView> {
             borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
             boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -3))],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
+          child: Row(
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    children: const [
-                      Icon(Icons.discount, size: 16, color: Colors.green),
-                      SizedBox(width: 6),
-                      Text('FIRSTTRIP Applied (₹50 OFF)', style: TextStyle(fontSize: 11, color: Colors.green, fontWeight: FontWeight.bold)),
-                    ],
-                  ),
-                  const Text('Payment: Cash', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey)),
+                  const Text('Estimated Fare', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                  Text('₹$activeFare', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
                 ],
               ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Total Estimate', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                      Text(activeVehicle['fare'], style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF111827))),
-                    ],
+              const SizedBox(width: 20),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF1D4ED8),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  const SizedBox(width: 24),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF1D4ED8),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PorterTripTrackingView(
+                          pickup: pickupCtrl.text,
+                          drop: dropCtrl.text,
+                          distance: distanceKm.toStringAsFixed(1),
+                          vehicleTitle: activeVehicle['title'],
+                          fare: '₹$activeFare',
+                        ),
                       ),
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PorterTripTrackingView(
-                              vehicleTitle: activeVehicle['title'],
-                              fare: activeVehicle['fare'],
-                            ),
-                          ),
-                        );
-                      },
-                      child: const Text('Book ${'Truck'}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-                    ),
-                  ),
-                ],
+                    );
+                  },
+                  child: const Text('Book & Track Live', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                ),
               ),
             ],
           ),
@@ -489,26 +606,44 @@ class _PorterCustomerHomeViewState extends State<PorterCustomerHomeView> {
 }
 
 // ==========================================
-// 3. PORTER RIDE TRACKING & OTP VIEW
+// 3. INTERACTIVE LIVE TRACKING SCREEN
 // ==========================================
-class PorterTripTrackingView extends StatelessWidget {
+class PorterTripTrackingView extends StatefulWidget {
+  final String pickup;
+  final String drop;
+  final String distance;
   final String vehicleTitle;
   final String fare;
 
-  const PorterTripTrackingView({super.key, required this.vehicleTitle, required this.fare});
+  const PorterTripTrackingView({
+    super.key,
+    required this.pickup,
+    required this.drop,
+    required this.distance,
+    required this.vehicleTitle,
+    required this.fare,
+  });
+
+  @override
+  State<PorterTripTrackingView> createState() => _PorterTripTrackingViewState();
+}
+
+class _PorterTripTrackingViewState extends State<PorterTripTrackingView> {
+  int tripProgressIndex = 1; // 0: Assigned, 1: Arriving at pickup, 2: Loading, 3: Moving to Drop
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Driver On The Way'),
+        title: const Text('Live Delivery Tracking'),
         backgroundColor: const Color(0xFF1D4ED8),
         foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           children: [
+            // OTP Highlight Card
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -523,32 +658,113 @@ class PorterTripTrackingView extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('START TRIP OTP', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
-                      Text('Share only with your Porter driver', style: TextStyle(fontSize: 12, color: Colors.black54)),
+                      Text('Share only with your driver at pickup', style: TextStyle(fontSize: 12, color: Colors.black54)),
                     ],
                   ),
                   Text('4829', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFFB45309), letterSpacing: 2)),
                 ],
               ),
             ),
+
             const SizedBox(height: 16),
+
+            // Live Simulated Map Container
+            Container(
+              height: 180,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E7EB),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: Opacity(
+                      opacity: 0.15,
+                      child: GridView.builder(
+                        physics: const NeverScrollableScrollPhysics(),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 6),
+                        itemBuilder: (context, i) => const Icon(Icons.add, size: 16, color: Colors.black),
+                      ),
+                    ),
+                  ),
+                  Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.local_shipping, size: 48, color: Color(0xFF1D4ED8)),
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                          decoration: BoxDecoration(color: const Color(0xFF1D4ED8), borderRadius: BorderRadius.circular(20)),
+                          child: const Text('Mukesh is 4 mins away', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                        )
+                      ],
+                    ),
+                  )
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // Driver Card
             Card(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: Colors.grey.shade200)),
               child: ListTile(
                 leading: const CircleAvatar(
                   backgroundColor: Color(0xFF1D4ED8),
                   child: Icon(Icons.person, color: Colors.white),
                 ),
-                title: Text('Mukesh Yadav ($vehicleTitle)', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: const Text('UP 16 BT 9921 • 4 mins away'),
-                trailing: const Icon(Icons.phone, color: Colors.green),
+                title: Text('Mukesh Yadav (${widget.vehicleTitle})', style: const TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: const Text('UP 16 BT 9921 • Rating 4.8 ★'),
+                trailing: IconButton(
+                  icon: const CircleAvatar(backgroundColor: Colors.green, child: Icon(Icons.call, color: Colors.white, size: 18)),
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Calling Driver: +91 98765 43210')),
+                    );
+                  },
+                ),
               ),
             ),
-            const Spacer(),
+
+            const SizedBox(height: 16),
+
+            // Route Details Summary
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.radio_button_checked, size: 14, color: Colors.green),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(widget.pickup, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                    ],
+                  ),
+                  const Divider(height: 18),
+                  Row(
+                    children: [
+                      const Icon(Icons.location_on, size: 16, color: Colors.redAccent),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(widget.drop, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold))),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
             SizedBox(
               width: double.infinity,
               child: OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel Request', style: TextStyle(color: Colors.red)),
+                child: const Text('Cancel Booking', style: TextStyle(color: Colors.redAccent)),
               ),
             )
           ],
@@ -559,7 +775,7 @@ class PorterTripTrackingView extends StatelessWidget {
 }
 
 // ==========================================
-// 4. DRIVER PARTNER VIEW (TRIP ACCEPT & OTP)
+// 4. DRIVER PARTNER DASHBOARD
 // ==========================================
 class DriverDashboardView extends StatefulWidget {
   const DriverDashboardView({super.key});
@@ -613,7 +829,7 @@ class _DriverDashboardViewState extends State<DriverDashboardView> {
           if (!isDutyOn)
             const Expanded(
               child: Center(
-                child: Text('Turn Duty ON to get trips', style: TextStyle(color: Colors.white54)),
+                child: Text('Turn Duty ON to get customer trips', style: TextStyle(color: Colors.white54)),
               ),
             )
           else if (!isTripAssigned)
@@ -624,12 +840,12 @@ class _DriverDashboardViewState extends State<DriverDashboardView> {
                   children: [
                     const Icon(Icons.explore, size: 60, color: Color(0xFF60A5FA)),
                     const SizedBox(height: 12),
-                    const Text('Searching for orders near you...', style: TextStyle(color: Colors.white70)),
+                    const Text('Looking for delivery orders nearby...', style: TextStyle(color: Colors.white70)),
                     const SizedBox(height: 18),
                     ElevatedButton(
                       style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF1D4ED8)),
                       onPressed: () => setState(() => isTripAssigned = true),
-                      child: const Text('Simulate Incoming Porter Trip', style: TextStyle(color: Colors.white)),
+                      child: const Text('Simulate Incoming Customer Booking', style: TextStyle(color: Colors.white)),
                     ),
                   ],
                 ),
@@ -647,13 +863,13 @@ class _DriverDashboardViewState extends State<DriverDashboardView> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Text('TATA ACE DEMAND', style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
-                        Text('₹289 Net', style: TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)),
+                        Text('₹380 Cash', style: TextStyle(color: Colors.greenAccent, fontSize: 18, fontWeight: FontWeight.bold)),
                       ],
                     ),
                     const Divider(color: Colors.white24, height: 20),
-                    const Text('Pickup: Connaught Place, New Delhi', style: TextStyle(color: Colors.white)),
+                    const Text('Pickup (A): Connaught Place, Central Delhi', style: TextStyle(color: Colors.white, fontSize: 13)),
                     const SizedBox(height: 4),
-                    const Text('Drop: Sector 62, Noida (18.2 km)', style: TextStyle(color: Colors.white70, fontSize: 13)),
+                    const Text('Drop (Z): Sector 62, Noida (18.5 km)', style: TextStyle(color: Colors.white70, fontSize: 13)),
                     const Spacer(),
                     if (!isOrderInProgress) ...[
                       const Text('Enter Customer 4-digit OTP:', style: TextStyle(color: Colors.white70, fontSize: 12)),
@@ -692,7 +908,7 @@ class _DriverDashboardViewState extends State<DriverDashboardView> {
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(color: Colors.green.withValues(alpha: 0.2), borderRadius: BorderRadius.circular(8)),
                         child: const Center(
-                          child: Text('Trip Ongoing to Destination...', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                          child: Text('Trip Ongoing to Point Z...', style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
                         ),
                       ),
                       const SizedBox(height: 12),
@@ -707,7 +923,7 @@ class _DriverDashboardViewState extends State<DriverDashboardView> {
                               driverOtpCtrl.clear();
                             });
                           },
-                          child: const Text('Complete Order & Collect Cash', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                          child: const Text('Complete Trip & Collect Cash', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
                         ),
                       ),
                     ]
